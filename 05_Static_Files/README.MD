@@ -121,7 +121,7 @@ body {
 > `image.jpg`
 
 <p align="center">
-<img src=""/>
+<img src="https://github.com/CrispenGari/Flask/blob/main/05_Static_Files/app/static/images/image.jpg"/>
 </p>
 
 - So now we have a page with some `css`, `js` and an image
