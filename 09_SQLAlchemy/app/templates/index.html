@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Form</title>
+  </head>
+  <body>
+    <center>
+      <h1>Students</h1>
+      {% with messages = get_flashed_messages()%} {% if messages %} {%for
+      message in messages%}
+      <li>{{message}}</li>
+      {% endfor %} {% endif %} {% endwith%}
+      <form action="#" method="post">
+        <h1>Add Students</h1>
+        <table>
+          <tbody>
+            <tr>
+              <td>Name:</td>
+              <td>
+                <input type="text" name="name" placeholder="Enter Name" />
+              </td>
+            </tr>
+            <tr>
+              <td>Surname:</td>
+              <td>
+                <input type="text" name="surname" placeholder="Enter Surname" />
+              </td>
+            </tr>
+            <tr>
+              <td>Email:</td>
+              <td>
+                <input type="email" name="email" placeholder="Enter Email" />
+              </td>
+            </tr>
+            <tr>
+              <td>Gender:</td>
+              <td>
+                <input type="text" name="gender" placeholder="Enter Gender" />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <button type="submit">Add</button>
+      </form>
+
+      <h1>Students</h1>
+      <table border="1">
+        <thead>
+          <tr>
+            <th>Id</th>
+            <th>Name</th>
+            <th>Surname</th>
+            <th>Email</th>
+            <th>Gender</th>
+          </tr>
+        </thead>
+        <tbody>
+          {%for student in students%}
+          <tr>
+            <td>{{student.id}}</td>
+            <td>{{student.name}}</td>
+            <td>{{student.surname}}</td>
+            <td>{{student.email}}</td>
+            <td>{{student.gender}}</td>
+          </tr>
+          {%endfor%}
+        </tbody>
+      </table>
+    </center>
+  </body>
+</html>
