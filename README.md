@@ -10,6 +10,9 @@
 <img src="https://img.shields.io/static/v1?label=package&message=flask&color=blue"/>
 <img src="https://img.shields.io/static/v1?label=package&message=jinja&color=yellow"/>
 <img src="https://img.shields.io/static/v1?label=package&message=requests&color=green"/>
+<img src="https://img.shields.io/static/v1?label=package&message=flask-rest&color=purple"/>
+<img src="https://img.shields.io/static/v1?label=package&message=sql-alchamey&color=black"/>
+<img src="https://img.shields.io/static/v1?label=package&message=mongodb&color=green"/>
 </p>
 
 <p align="center">
