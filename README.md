@@ -45,5 +45,5 @@ $ .\Scripts\activate
 ### Install Flask
 
 ```shell
-$ pip install django
+$ pip install flask
 ```
