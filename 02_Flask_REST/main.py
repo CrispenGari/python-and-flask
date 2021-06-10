@@ -1,7 +1,5 @@
-import requests
-url = "http://127.0.0.1:5000/"
-res = requests.get(url)
-print(res.json())
-
-if __name__=="__main__":
-    pass
+from requests import put, get
+res = put('http://localhost:5000/todo1', data={'data': 'Remember the milk'}).json()
+print(res)
+input()
+print(get('http://localhost:5000/todo1').json())

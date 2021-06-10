@@ -45,4 +45,4 @@ if __name__=="__main__":
 { "message": "Hello World" }
 ```
 
-That's our hello world REST application in flask. from now on we are going to use postman to make request to the server and create a meaningful application that will allow us to get, post, update and delete from the database.
+That's our hello world REST application in flask. Next we are going to create a simple todo application that will post and get data.
