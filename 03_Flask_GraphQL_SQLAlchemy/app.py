@@ -1,6 +1,5 @@
 from api import app, db
-from ariadne import QueryType, MutationType, load_schema_from_path, make_executable_schema, graphql_sync, \
-    snake_case_fallback_resolvers
+from ariadne import QueryType, MutationType, load_schema_from_path, make_executable_schema, graphql_sync
 from ariadne.constants import PLAYGROUND_HTML
 from flask import request, jsonify
 
@@ -22,7 +21,7 @@ mutation.set_field("deletePost", delete_post_resolver)
 
 type_defs = load_schema_from_path("schema.graphql")
 schema = make_executable_schema(
-    type_defs, snake_case_fallback_resolvers
+    type_defs, query, mutation
 )
 
 

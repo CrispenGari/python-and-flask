@@ -1,34 +1,33 @@
-
 schema {
-    query: Query
-    mutation: Mutation
+  query: Query
+  mutation: Mutation
 }
 
 type Post {
-    postId: String!
-    title: String!
-    created_at: String!
+  postId: String!
+  title: String!
+  createdAt: String!
 }
 
 type PostResult {
-    success: Boolean!
-    errors: [String]
-    post: Post
+  success: Boolean!
+  errors: [String]
+  post: Post
 }
 
 type PostsResult {
-    success: Boolean!
-    errors: [String]
-    post: [Post]
+  success: Boolean!
+  errors: [String]
+  posts: [Post]
 }
 
 type Query {
-    getPosts: PostsResult
-    getPost(postId: String!): PostResult
+  getPosts: PostsResult!
+  getPost(postId: String!): PostResult
 }
 
-type Mutation{
-     createPost(title: String!, created_at: String): PostResult!
-     updatePost(postId: String!, title: String): PostResult!
-     deletePost(postId: String!): Boolean!
+type Mutation {
+  createPost(title: String!): PostResult!
+  updatePost(postId: String!, title: String): PostResult!
+  deletePost(postId: String!): Boolean!
 }
