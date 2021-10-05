@@ -1,0 +1,25 @@
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+type Profile {
+  userId: String!
+  gender: String!
+  user: User
+}
+
+type User {
+  userId: String!
+  username: String!
+  profile: Profile
+}
+
+type Query {
+  user(userId: String!): User
+  profile(profileId: String!): Profile
+}
+
+type Mutation {
+  register(username: String!, gender: String!): User!
+}
