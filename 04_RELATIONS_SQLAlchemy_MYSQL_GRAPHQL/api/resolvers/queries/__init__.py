@@ -1,25 +1,31 @@
+from flask import json
 from api import db
-from models import User, Profile
+from api.models import User, Profile
 
-def create_post_resolver(obj, info, title):
+def user_resolver(obj, info, userId):
     try:
-        user = User(
-            
-        )
-        # post = Post(
-        #     title=title,
-        #     postId=uuid.uuid4(),
-        #     createdAt=date.today()
-        # )
-        # db.session.add(post)
-        # db.session.commit()
-        # payload = {
-        #     "success": True,
-        #     "post": post.to_dict()
-        # }
-    except ValueError:
-        payload = {
-            "success": False,
-            "errors": ["something happenned."]
+        user = User.query.filter_by(userId=userId).first();
+        return {
+            "user": user.to_dict(),
+            "error": None
         }
-    return payload
+    except Exception as e:
+        return{
+            'user': None,
+            "error": str(e)
+
+        }
+
+def profile_resolver(obj, info, profileId):
+    try:
+        profile = Profile.query.filter_by(profileId=profileId).first()
+        return{
+            "profile": profile.to_dict(),
+            "error": None
+        }
+    except Exception as e:
+        return{
+            'profile': None,
+            "error": str(e)
+
+        }

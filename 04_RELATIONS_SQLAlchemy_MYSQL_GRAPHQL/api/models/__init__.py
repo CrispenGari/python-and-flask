@@ -22,7 +22,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     userId = db.Column(db.String(50), nullable=False, unique=True)
     username = db.Column(db.String(50), nullable=False, unique=True)
-    profile = db.relationship('Profile', backref='profile', lazy=True)
+    profile = db.relationship('Profile', backref='profile', lazy=True, uselist=False)
         
     def __repr__(self) -> str:
         return '<User %r>' % self.username
@@ -31,5 +31,5 @@ class User(db.Model):
          return {
             "userId": str(self.userId),
             "username": self.username,
-            "profile": self.profile
+            "profile": self.profile.to_dict()
         }

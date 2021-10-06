@@ -4,6 +4,7 @@ from ariadne.constants import PLAYGROUND_HTML
 from flask import request, jsonify
 
 from api.resolvers.mutations import register_user_resolver
+from api.resolvers.queries import profile_resolver, user_resolver
 
 query = QueryType()
 mutation = MutationType()
@@ -14,6 +15,8 @@ schema = make_executable_schema(
 )
 
 mutation.set_field("register", register_user_resolver)
+query.set_field("user", user_resolver)
+query.set_field("profile", profile_resolver)
 type_defs = load_schema_from_path("schema.graphql")
 
 schema = make_executable_schema(

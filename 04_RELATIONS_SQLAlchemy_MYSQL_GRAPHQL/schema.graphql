@@ -5,6 +5,7 @@ schema {
 
 type Profile {
   userId: String!
+  profileId: String!
   gender: String!
   user: User
 }
@@ -25,9 +26,14 @@ type RegisterUser {
   error: ErrorType
 }
 
+type ProfileObjectTYpe {
+  profile: Profile
+  error: ErrorType
+}
+
 type Query {
-  user(userId: String!): User
-  profile(profileId: String!): Profile
+  user(userId: String!): RegisterUser!
+  profile(profileId: String!): ProfileObjectTYpe
   hello(username: String): String
 }
 
