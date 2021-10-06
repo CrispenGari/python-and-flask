@@ -15,17 +15,3 @@ def user_resolver(obj, info, userId):
             "error": str(e)
 
         }
-
-def profile_resolver(obj, info, profileId):
-    try:
-        profile = Profile.query.filter_by(profileId=profileId).first()
-        return{
-            "profile": profile.to_dict(),
-            "error": None
-        }
-    except Exception as e:
-        return{
-            'profile': None,
-            "error": str(e)
-
-        }
