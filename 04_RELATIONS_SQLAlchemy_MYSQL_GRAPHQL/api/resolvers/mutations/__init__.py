@@ -1,31 +1,32 @@
 
-
-# from api import db
-from api.models.user import User
-from api.models.profile import Profile
+from api import db
+from api.models import Profile, User
 from uuid import uuid4
 def register_user_resolver(obj, info, username, gender):
-
     print(username, gender)
-    return {
-        "userId": username,
-            "username": username,
-            "profile": {
-                "username": "username"
-            }
-    }
     try:
-        profile = Profile(uuid4(), gender=gender)
-        db.session.add(profile)
-        db.session.commit()
         user = User(
           username=username,
-          userId=uuid4(),
-          profile=profile  
+          userId=uuid4()
         )
         db.session.add(user)
         db.session.commit()
-        return user
-    except ValueError:
-       pass
-    return None
+        profile = Profile(
+            profileId=uuid4(),
+            gender=gender, 
+            userId=user.userId
+         )
+        db.session.add(profile)
+        db.session.commit()
+        return {
+            "user": user.to_dict(),
+            "error": None
+        }
+    except Exception as e:
+      return {
+          "user":None,
+          "error":{
+              "field": "hello",
+              "message": str(e)
+          }
+      }

@@ -15,11 +15,22 @@ type User {
   profile: Profile
 }
 
+type ErrorType {
+  field: String!
+  message: String!
+}
+
+type RegisterUser {
+  user: User
+  error: ErrorType
+}
+
 type Query {
   user(userId: String!): User
   profile(profileId: String!): Profile
+  hello(username: String): String
 }
 
 type Mutation {
-  register(username: String!, gender: String!): User!
+  register(username: String!, gender: String!): RegisterUser
 }

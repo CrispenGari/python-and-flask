@@ -1,6 +1,5 @@
 from api import db
-from api.models.user import User
-from api.models.profile import Profile
+from models import User, Profile
 
 def create_post_resolver(obj, info, title):
     try:
