@@ -2,7 +2,26 @@ schema {
   query: Query
   mutation: Mutation
 }
+input AddressInput {
+  email: String!
+  person_id: Int!
+}
 
+input UpdateAddressInput {
+  email: String!
+  id: Int!
+}
+
+type Address {
+  id: Int!
+  email: String!
+  person_id: Int!
+}
+type Person {
+  id: Int!
+  name: String!
+  addresses: [Address]!
+}
 type Profile {
   userId: String!
   profileId: String!
@@ -31,12 +50,26 @@ type ProfileObjectTYpe {
   error: ErrorType
 }
 
+type AddressType {
+  error: ErrorType
+  address: Address
+}
+type PersonType {
+  error: ErrorType
+  person: Person
+}
 type Query {
   user(userId: String!): RegisterUser!
   profile(profileId: String!): ProfileObjectTYpe
   hello(username: String): String
+  getPerson(id: Int!): PersonType
 }
 
 type Mutation {
   register(username: String!, gender: String!): RegisterUser
+
+  createAddress(input: AddressInput!): AddressType!
+  createPerson(name: String!): PersonType!
+  updateAddress(input: UpdateAddressInput!): AddressType!
+  deletePerson(id: Int!): Boolean!
 }

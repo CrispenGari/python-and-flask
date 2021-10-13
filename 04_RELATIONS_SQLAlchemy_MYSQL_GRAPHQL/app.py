@@ -3,8 +3,8 @@ from ariadne import QueryType, MutationType, load_schema_from_path, make_executa
 from ariadne.constants import PLAYGROUND_HTML
 from flask import request, jsonify
 
-from api.resolvers.mutations import register_user_resolver
-from api.resolvers.queries import profile_resolver, user_resolver
+from api.resolvers.mutations import create_email_addresses, create_person_resolver, delete_person_resolver, register_user_resolver, update_email_addresses
+from api.resolvers.queries import person_query_resolver, user_resolver
 
 query = QueryType()
 mutation = MutationType()
@@ -14,11 +14,19 @@ schema = make_executable_schema(
     type_defs, query, mutation
 )
 
+# Mutations
 mutation.set_field("register", register_user_resolver)
+mutation.set_field("createAddress", create_email_addresses)
+mutation.set_field("createPerson", create_person_resolver)
+mutation.set_field("deletePerson", delete_person_resolver)
+mutation.set_field("updateAddress", update_email_addresses)
+
+# Queries
 query.set_field("user", user_resolver)
-query.set_field("profile", profile_resolver)
+query.set_field("getPerson", person_query_resolver)
 type_defs = load_schema_from_path("schema.graphql")
 
+# Schema
 schema = make_executable_schema(
     type_defs, mutation, query
 )

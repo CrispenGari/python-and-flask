@@ -33,3 +33,34 @@ class User(db.Model):
             "username": self.username,
             "profile": self.profile.to_dict()
         }
+
+class Person(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    addresses = db.relationship('Address', backref='person', lazy=True, cascade="all, delete")
+
+    def __repr__(self) -> str:
+        return '<Person %r>' % self.name
+
+    def to_dict(self):
+         return {
+            "id": str(self.id),
+            "name": self.name,
+            "addresses": self.addresses.to_dict()
+        }
+
+class Address(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), nullable=False)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'),
+        nullable=False)
+
+    def __repr__(self) -> str:
+        return '<Address %r>' % self.email
+
+    def to_dict(self):
+         return {
+            "id": str(self.id),
+            "email": self.email,
+            "person_id": self.person_id
+        }

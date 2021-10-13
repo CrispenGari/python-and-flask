@@ -330,3 +330,312 @@ From teh above query this will be the response that we get.
   }
 }
 ```
+
+### One-to-Many Relationships
+
+We are going to create a one-to-many relationship between a `person` and `address`.
+
+> The most common relationships are one-to-many relationships. Because relationships are declared before they are established you can use strings to refer to classes that are not created yet.
+
+### `Person` and `Address` models
+
+We are going to create the `person` and `address` models in the `models` package and they will be looking as follows:
+
+```py
+class Person(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    addresses = db.relationship('Address', backref='person', lazy=True)
+
+    # Optional
+    def __repr__(self) -> str:
+        return '<Person %r>' % self.name
+
+    def to_dict(self):
+         return {
+            "id": str(self.id),
+            "name": self.name,
+            "addresses": self.addresses.to_dict()
+        }
+
+class Address(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), nullable=False)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'),
+        nullable=False)
+
+    # Optional
+    def __repr__(self) -> str:
+        return '<Address %r>' % self.email
+
+    def to_dict(self):
+         return {
+            "id": str(self.id),
+            "email": self.email,
+            "person_id": self.person_id
+        }
+```
+
+Next we are going to define our graphql types in the `schema.graphql` file. We are going to add to those
+existing types, and we are also going to create our mutations and queries in the Mutation and Query type respectively as follows:
+
+```gql
+...
+input AddressInput {
+  email: String!
+  person_id: Int!
+}
+
+type Address {
+  id: Int!
+  email: String!
+  person_id: Int!
+}
+type Person {
+  id: Int!
+  name: String!
+  addresses: [Address]!
+}
+....
+
+type AddressType {
+  error: ErrorType
+  address: Address
+}
+type PersonType {
+  error: ErrorType
+  person: Person
+}
+type Query {
+  ...
+  hello(username: String): String
+  getPerson(id: Int!): PersonType
+}
+
+type Mutation {
+  ...
+  createAddress(input: AddressInput!): AddressType
+  createPerson(name: String!): PersonType
+}
+
+```
+
+We have created an `InputType` using the `input` keyword in graphql. This is the same as the `type` but the `type` defines the `ObjectType`. What an `InputType` does is to allow us to create inputs that will be passed directly to our resolvers. We will see this in a moment in action.
+
+We are then going to create add two resolvers in the `mutation` packages which are `create_person_resolver` and `create_email_addresses` as follows:
+
+```py
+...
+def create_person_resolver(obj, info, name):
+    try:
+        person = Person(name=name)
+        db.session.add(person)
+        db.session.commit()
+        return {
+            "person": person,
+            "error": None
+        }
+    except Exception as e:
+      return {
+          "person":None,
+          "error":{
+              "field": "hello",
+              "message": str(e)
+          }
+      }
+
+
+def create_email_addresses(obj, info, input):
+    try:
+        try:
+            person = Person.query.filter_by(id=input["person_id"]).first()
+        except Exception as e:
+             return {
+                "address":None,
+                "error":{
+                    "field": "id",
+                    "message": str(e)
+                }
+            }
+        address = Address(email=input["email"], person_id=person.id)
+
+        db.session.add(address)
+        db.session.commit()
+        return {
+            "address": address.to_dict(),
+            "error": None
+        }
+    except Exception as e:
+      return {
+          "address":None,
+          "error":{
+              "field": "hello",
+              "message": str(e)
+          }
+      }
+
+```
+
+Next we are going to go to the `queries` package and create a `person_query_resolver` which looks as follows:
+
+```py
+...
+def person_query_resolver(obj, info, id):
+    try:
+        person = Person.query.filter_by(id=id).first();
+        return {
+            "person": person,
+            "error": None
+        }
+    except Exception as e:
+        return{
+            'person': None,
+            "error": str(e)
+
+        }
+```
+
+Now we are able to persist the person and addresses to the database and get them back. Let's go in the `app.py` file and register our queries and resolvers as follows:
+
+```py
+...
+mutation.set_field("createAddress", create_email_addresses)
+mutation.set_field("createPerson", create_person_resolver)
+
+# Queries
+...
+query.set_field("getPerson", person_query_resolver)
+
+```
+
+Now restart the server and go to http://127.0.0.1:3001/graphql. In the playground we are going to do the following.
+
+1. Create the Person
+
+```
+mutation {
+  createPerson(name: "user1") {
+    error {
+      field
+      message
+    }
+    person {
+      id
+      name
+      addresses {
+        id
+      }
+    }
+  }
+}
+```
+
+Response:
+
+```json
+{
+  "data": {
+    "createPerson": {
+      "error": null,
+      "person": {
+        "addresses": [],
+        "id": 3,
+        "name": "user1"
+      }
+    }
+  }
+}
+```
+
+2. Add email addresses to the Person
+
+```
+mutation {
+  createAddress(input: { email: "test4@gmail.com", person_id: 3 }) {
+    error {
+      field
+      message
+    }
+    address {
+      id
+      email
+    }
+  }
+}
+```
+
+You can add as more email addresses as you want.
+
+Response:
+
+```json
+{
+  "data": {
+    "createAddress": {
+      "address": {
+        "email": "test4@gmail.com",
+        "id": 3
+      },
+      "error": null
+    }
+  }
+}
+```
+
+To get the user with his or her email addresses we are going to run the following graphql `query`.
+
+```
+{
+  getPerson(id: 3) {
+    error {
+      field
+      message
+    }
+    person {
+      id
+      name
+      addresses {
+        id
+        email
+        person_id
+      }
+    }
+  }
+}
+
+```
+
+Response
+
+```json
+{
+  "data": {
+    "getPerson": {
+      "error": null,
+      "person": {
+        "addresses": [
+          {
+            "email": "test@gmail.com",
+            "id": 1,
+            "person_id": 3
+          },
+          {
+            "email": "test2@gmail.com",
+            "id": 2,
+            "person_id": 3
+          },
+          {
+            "email": "test4@gmail.com",
+            "id": 3,
+            "person_id": 3
+          }
+        ],
+        "id": 3,
+        "name": "user1"
+      }
+    }
+  }
+}
+```
+
+> The other code about updating (the address) and deleting (the person) will be found in the code files. Note that we need to add cascades to our database [cascades](https://docs.sqlalchemy.org/en/14/orm/cascades.html)
