@@ -6,7 +6,7 @@ def user_resolver(obj, info, userId):
     try:
         user = User.query.filter_by(userId=userId).first();
         return {
-            "user": user.to_dict(),
+            "user": user,
             "error": None
         }
     except Exception as e:

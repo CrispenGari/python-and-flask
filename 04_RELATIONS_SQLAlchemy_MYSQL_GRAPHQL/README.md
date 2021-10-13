@@ -34,7 +34,7 @@ CREATE DATABASE IF NOT EXISTS relations;
 We are going to create a `one-to-one` relationship between `user` and `profile`. In our models package we are going to have the following code:
 
 ```py
-from api import db
+
 class Profile(db.Model):
     __tablename__ = "profile"
     id = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -67,9 +67,8 @@ class User(db.Model):
          return {
             "userId": str(self.userId),
             "username": self.username,
-            "profile": self.profile.to_dict()
+            "profile": self.profile
         }
-
 ```
 
 We are setting `uselist=False` in the `relationship` function so that we tell sqlalchemy that this is a one to one relationship.
@@ -83,12 +82,10 @@ schema {
   query: Query
   mutation: Mutation
 }
-
 type Profile {
   userId: String!
   profileId: String!
   gender: String!
-  user: User
 }
 
 type User {
@@ -106,6 +103,10 @@ type RegisterUser {
   user: User
   error: ErrorType
 }
+type ProfileResponse {
+  profile: Profile
+  error: ErrorType
+}
 
 type ProfileObjectTYpe {
   profile: Profile
@@ -115,29 +116,28 @@ type ProfileObjectTYpe {
 type Query {
   user(userId: String!): RegisterUser!
   profile(profileId: String!): ProfileObjectTYpe
-  hello(username: String): String
 }
 
 type Mutation {
-  register(username: String!, gender: String!): RegisterUser
+  register(username: String!): RegisterUser!
+  createProfile(gender: String!, userId: String!): ProfileResponse!
 }
 
 ```
 
 ### Register Resolver
 
-We are going to create a subpackage of resolvers called `mutations`. This package will contain all the mutations that we are going to create. We are also going to have `queries` packages which will contain all the queries.
+We are going to create a sub-package of resolvers called `mutations`. This package will contain all the mutations that we are going to create. We are also going to have `queries` packages which will contain all the queries.
 
-1. Creating a user mutation
+1. Creating a user and profile mutation
+
+- We are going to allow the user to create their account first and then get an id so that they will then create a profile.
 
 ```py
 # mutations/__init__.py
 
-from api import db
-from api.models import Profile, User
-from uuid import uuid4
-def register_user_resolver(obj, info, username, gender):
-    print(username, gender)
+def register_user_resolver(obj, info, username):
+    print("username", username)
     try:
         user = User(
           username=username,
@@ -145,15 +145,9 @@ def register_user_resolver(obj, info, username, gender):
         )
         db.session.add(user)
         db.session.commit()
-        profile = Profile(
-            profileId=uuid4(),
-            gender=gender,
-            userId=user.userId
-         )
-        db.session.add(profile)
-        db.session.commit()
+        print(user.to_dict())
         return {
-            "user": user.to_dict(),
+            "user": user,
             "error": None
         }
     except Exception as e:
@@ -164,6 +158,29 @@ def register_user_resolver(obj, info, username, gender):
               "message": str(e)
           }
       }
+
+def create_profile_resolver(obj, info, gender, userId):
+    try:
+        profile = Profile(
+            profileId=uuid4(),
+            gender=gender,
+            userId=userId
+         )
+        db.session.add(profile)
+        db.session.commit()
+        return {
+            "profile": profile,
+            "error": None
+        }
+    except Exception as e:
+      return {
+          "profile":None,
+          "error":{
+              "field": "hello",
+              "message": str(e)
+          }
+      }
+
 ```
 
 So we first create a and persist in the database. Then we will then create the profile for that user and persist it again in the database. This is done by the use of the `register_user_resolver`
@@ -182,7 +199,7 @@ def user_resolver(obj, info, userId):
     try:
         user = User.query.filter_by(userId=userId).first();
         return {
-            "user": user.to_dict(),
+            "user": user,
             "error": None
         }
     except Exception as e:
@@ -214,6 +231,8 @@ schema = make_executable_schema(
 )
 
 mutation.set_field("register", register_user_resolver)
+mutation.set_field("createProfile", create_profile_resolver)
+
 query.set_field("user", user_resolver)
 type_defs = load_schema_from_path("schema.graphql")
 
@@ -248,7 +267,7 @@ For this mutation
 
 ```
 mutation {
-  register(username: "username5", gender: "male") {
+  register(username: "username5") {
     user {
       username
       userId
@@ -275,11 +294,7 @@ We get the following response
     "register": {
       "error": null,
       "user": {
-        "profile": {
-          "gender": "male",
-          "profileId": "75d8c173-767a-4739-a2ef-ee864ed36f01",
-          "userId": "e416413c-1e45-4885-9bfd-15f7e98f4a27"
-        },
+        "profile": null,
         "userId": "e416413c-1e45-4885-9bfd-15f7e98f4a27",
         "username": "username5"
       }
@@ -310,7 +325,62 @@ query {
 }
 ```
 
-From teh above query this will be the response that we get.
+From the above query this will be the response that we get.
+
+```json
+{
+  "data": {
+    "user": {
+      "error": null,
+      "user": {
+        "profile": null,
+        "userId": "d25a968e-f9a9-473d-bdb4-85fbbf2ad06f",
+        "username": "username4"
+      }
+    }
+  }
+}
+```
+
+Now that we have the user let's go and create the profile for the user.
+
+```
+mutation {
+  createProfile(
+    gender: "male"
+    userId: "f6118278-fc59-4c79-89d1-063987be3d58"
+  ) {
+    error {
+      field
+      message
+    }
+    profile {
+      profileId
+      gender
+      userId
+    }
+  }
+}
+```
+
+Response:
+
+```json
+{
+  "data": {
+    "createProfile": {
+      "error": null,
+      "profile": {
+        "gender": "male",
+        "profileId": "8fdf0c9c-3e2c-4b9d-a8fd-5a6974b5a206",
+        "userId": "f6118278-fc59-4c79-89d1-063987be3d58"
+      }
+    }
+  }
+}
+```
+
+Now if we try to get the user with `userId=f6118278-fc59-4c79-89d1-063987be3d58` from the `user-query` here will be the response:
 
 ```json
 {
@@ -320,11 +390,11 @@ From teh above query this will be the response that we get.
       "user": {
         "profile": {
           "gender": "male",
-          "profileId": "4803a8f7-15f5-4b08-b214-83650786041b",
-          "userId": "d25a968e-f9a9-473d-bdb4-85fbbf2ad06f"
+          "profileId": "48a8dfd4-d2e6-42e0-b6a8-769837da81ef",
+          "userId": "f6118278-fc59-4c79-89d1-063987be3d58"
         },
-        "userId": "d25a968e-f9a9-473d-bdb4-85fbbf2ad06f",
-        "username": "username4"
+        "userId": "f6118278-fc59-4c79-89d1-063987be3d58",
+        "username": "user22"
       }
     }
   }

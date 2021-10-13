@@ -31,7 +31,7 @@ class User(db.Model):
          return {
             "userId": str(self.userId),
             "username": self.username,
-            "profile": self.profile.to_dict()
+            "profile": self.profile
         }
 
 class Person(db.Model):

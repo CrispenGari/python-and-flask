@@ -26,7 +26,6 @@ type Profile {
   userId: String!
   profileId: String!
   gender: String!
-  user: User
 }
 
 type User {
@@ -42,6 +41,10 @@ type ErrorType {
 
 type RegisterUser {
   user: User
+  error: ErrorType
+}
+type ProfileResponse {
+  profile: Profile
   error: ErrorType
 }
 
@@ -66,7 +69,8 @@ type Query {
 }
 
 type Mutation {
-  register(username: String!, gender: String!): RegisterUser
+  register(username: String!): RegisterUser!
+  createProfile(gender: String!, userId: String!): ProfileResponse!
 
   createAddress(input: AddressInput!): AddressType!
   createPerson(name: String!): PersonType!

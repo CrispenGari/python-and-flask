@@ -3,7 +3,7 @@ from ariadne import QueryType, MutationType, load_schema_from_path, make_executa
 from ariadne.constants import PLAYGROUND_HTML
 from flask import request, jsonify
 
-from api.resolvers.mutations import create_email_addresses, create_person_resolver, delete_person_resolver, register_user_resolver, update_email_addresses
+from api.resolvers.mutations import create_email_addresses, create_person_resolver, create_profile_resolver, delete_person_resolver, register_user_resolver, update_email_addresses
 from api.resolvers.queries import person_query_resolver, user_resolver
 
 query = QueryType()
@@ -16,6 +16,8 @@ schema = make_executable_schema(
 
 # Mutations
 mutation.set_field("register", register_user_resolver)
+mutation.set_field("createProfile", create_profile_resolver)
+
 mutation.set_field("createAddress", create_email_addresses)
 mutation.set_field("createPerson", create_person_resolver)
 mutation.set_field("deletePerson", delete_person_resolver)
