@@ -64,3 +64,41 @@ class Address(db.Model):
             "email": self.email,
             "person_id": self.person_id
         }
+
+questions_categories = db.Table('questions_categories',
+    db.Column('question_id', db.Integer, 
+    db.ForeignKey('question.id'), primary_key=True),
+    db.Column('category_id', db.Integer,
+     db.ForeignKey('category.id'), primary_key=True)
+)
+
+class Question(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    question = db.Column(db.String(25), nullable=False)
+    categories = db.relationship('Category', secondary=questions_categories, lazy='subquery',
+        backref=db.backref('questions', lazy=True))
+
+    def __repr__(self) -> str:
+        return '<Question %r>' % self.question
+
+    def to_dict(self):
+         return {
+            "id": self.id,
+            "question": self.question,
+            "categories": self.categories
+        }
+class Category(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    category = db.Column(db.String(25), nullable=False)
+
+    def __repr__(self) -> str:
+        return '<Category %r>' % self.category
+
+    def to_dict(self):
+         return {
+            "id": self.id,
+            "category": self.category,
+        }
+
+
+

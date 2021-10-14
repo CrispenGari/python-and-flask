@@ -1,6 +1,6 @@
 from flask import json
 from api import db
-from api.models import Person, User, Profile
+from api.models import Person, Question, User, Profile
 
 def user_resolver(obj, info, userId):
     try:
@@ -20,7 +20,6 @@ def user_resolver(obj, info, userId):
 def person_query_resolver(obj, info, id):
     try:
         person = Person.query.filter_by(id=id).first();
-        print(person)
         return {
             "person": person,
             "error": None
@@ -31,3 +30,16 @@ def person_query_resolver(obj, info, id):
             "error": str(e)
 
         }
+
+def question_query_resolver(obj, info, id):
+    try:
+        question = Question.query.filter_by(id=id).first();
+        return question
+    except Exception as e:
+        return None
+
+def questions_query_resolver(obj, info):
+    try:
+        return Question.query.all();
+    except Exception as e:
+        return None

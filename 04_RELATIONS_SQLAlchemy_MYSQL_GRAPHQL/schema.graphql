@@ -12,6 +12,15 @@ input UpdateAddressInput {
   id: Int!
 }
 
+type Category {
+  id: Int!
+  category: String!
+}
+type Question {
+  id: Int!
+  question: String!
+  categories: [Category]!
+}
 type Address {
   id: Int!
   email: String!
@@ -61,11 +70,16 @@ type PersonType {
   error: ErrorType
   person: Person
 }
+
 type Query {
   user(userId: String!): RegisterUser!
   profile(profileId: String!): ProfileObjectTYpe
   hello(username: String): String
+
   getPerson(id: Int!): PersonType
+
+  getQuestion(id: Int): Question
+  getQuestions: [Question]!
 }
 
 type Mutation {
@@ -76,4 +90,7 @@ type Mutation {
   createPerson(name: String!): PersonType!
   updateAddress(input: UpdateAddressInput!): AddressType!
   deletePerson(id: Int!): Boolean!
+
+  createCategory(category: String!, questionId: Int!): Category
+  createQuestion(question: String!): Question
 }

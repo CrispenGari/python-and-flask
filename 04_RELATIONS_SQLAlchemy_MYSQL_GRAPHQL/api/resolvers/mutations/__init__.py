@@ -1,7 +1,7 @@
-
 from api import db
-from api.models import Address, Person, Profile, User
+from api.models import Address, Category, Person, Profile, Question, User
 from uuid import uuid4
+
 def register_user_resolver(obj, info, username):
     print("username", username)
     try:
@@ -68,7 +68,8 @@ def create_person_resolver(obj, info, name):
 
 def delete_person_resolver(obj, info, id):
     try:
-        Person.query.filter_by(id=id).delete()
+        person = Person.query.filter_by(id=id).first()
+        db.session.delete(person)
         db.session.commit()
         return True
     except Exception as e:
@@ -133,3 +134,31 @@ def update_email_addresses(obj, info, input):
               "message": str(e)
           }
       }
+
+
+def create_question_resolver(obj, info, question):
+    try:
+        qn = Question(question=question)
+        db.session.add(qn)
+        db.session.commit()
+        return qn
+    except Exception as e:
+      return None
+
+def create_category_resolver(obj, info, category, questionId):
+    try:
+        try:
+            question = Question.query.filter_by(id=questionId).first()
+        except:
+            return {
+                "category": None
+            }
+
+        cate = Category(category=category)
+        db.session.add(cate)
+        question.categories.append(cate)
+        db.session.add(cate)
+        db.session.commit()
+        return cate
+    except Exception as e:
+      return None

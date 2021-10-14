@@ -708,4 +708,495 @@ Response
 }
 ```
 
-> The other code about updating (the address) and deleting (the person) will be found in the code files. Note that we need to add cascades to our database [cascades](https://docs.sqlalchemy.org/en/14/orm/cascades.html)
+### Updating a person address.
+
+To update the person address we are going to add the following under the Mutation Type in the `schema.graphql` file:
+
+```
+...
+type Mutation {
+  ...
+  updateAddress(input: UpdateAddressInput!): AddressType!
+  deletePerson(id: Int!): Boolean! # this is for deleting the person
+}
+```
+
+Now we will head over to our mutations an create the `update_email_addresses` resolver which will look as follows:
+
+```py
+def update_email_addresses(obj, info, input):
+    try:
+        try:
+            address = Address.query.filter_by(id=input["id"]).first()
+
+        except Exception as e:
+             return {
+                "address":None,
+                "error":{
+                    "field": "id",
+                    "message": str(e)
+                }
+            }
+
+        # check the validity of the email
+        address.email = input["email"]
+        db.session.commit()
+        return {
+            "address": address,
+            "error": None
+        }
+    except Exception as e:
+      return {
+          "address":None,
+          "error":{
+              "field": "hello",
+              "message": str(e)
+          }
+      }
+```
+
+Next we are going to register our new resolver in the `app.py` as follows:
+
+```py
+...
+mutation.set_field("deletePerson", delete_person_resolver) # this is for deleting the person
+mutation.set_field("updateAddress", update_email_addresses)
+...
+```
+
+Now we will be able to make the following graphql mutation of updating the email address of the person.
+
+```
+mutation {
+  updateAddress(input: { email: "email.gmail.com", id: 4 }) {
+    address {
+      id
+      email
+      person_id
+    }
+    error {
+      field
+      message
+    }
+  }
+}
+
+```
+
+We will get the following response:
+
+```json
+{
+  "data": {
+    "updateAddress": {
+      "address": {
+        "email": "email.gmail.com",
+        "id": 4,
+        "person_id": 3
+      },
+      "error": null
+    }
+  }
+}
+```
+
+### Deleting the person
+
+Note that when deleting the person, we also need to delete the addresses of that person. You can change this behavior by setting the cascades which you can read in the [docs](https://docs.sqlalchemy.org/en/14/orm/cascades.html).
+
+In our case we want to delete the child related objects to the person, so we are going to set the cascade in the person entity as follows:
+
+```
+class Person(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    addresses = db.relationship('Address', backref='person', lazy=True, cascade="all, delete")
+   ...
+```
+
+We set the `cascade="all, delete"` on the `db.relationship` on the addresses. The `backref="person"` allows us to reference the person in the address by calling `address.person`
+
+Now we will add the `delete_person_resolver` in the `mutations` package as follows
+
+```py
+def delete_person_resolver(obj, info, id):
+    try:
+        person = Person.query.filter_by(id=id).first()
+        db.session.delete(person)
+        db.session.commit()
+        return True
+    except Exception as e:
+      print(e)
+      return  False
+
+```
+
+Note that we have to use the `session.delete(person)` after we get the person by id, otherwise it will not work if we try to delete the person as follows:
+
+```py
+...
+Person.query.filter_by(id=id).delete()
+db.session.commit()
+...
+```
+
+Now we are now able to make the following delete person mutation by passing the `id` of the person to the resolver.
+
+```
+mutation{
+  deletePerson(id: 2)
+}
+```
+
+If everything went well we will get the following response.
+
+```json
+{
+  "data": {
+    "deletePerson": true
+  }
+}
+```
+
+> Note that deleting this person will delete all the addresses related to this person.
+
+**Note:**:
+
+> To establish a `bidirectional` relationship in `one-to-many`, where the “reverse” side is a many to one, specify an additional `relationship()` and connect the two using the `relationship.back_populates` parameter.
+
+Example from the [docs](https://docs.sqlalchemy.org/en/14/orm/basic_relationships.html#one-to-many):
+
+```py
+class Parent(Base):
+    __tablename__ = 'parent'
+    id = Column(Integer, primary_key=True)
+    children = relationship("Child", back_populates="parent")
+
+class Child(Base):
+    __tablename__ = 'child'
+    id = Column(Integer, primary_key=True)
+    parent_id = Column(Integer, ForeignKey('parent.id'))
+    parent = relationship("Parent", back_populates="children")
+```
+
+Note that `Many to One` relationship is just similar to `One to Many`.
+
+### Many to One Relations
+
+> Many to Many adds an `association` table between two classes. The association table is indicated by the relationship.secondary argument to `relationship()`. Usually, the Table uses the `MetaData` object associated with the declarative base class, so that the `ForeignKey` directives can locate the remote tables with which to link:
+
+We are going to create a Question and Category models in the models package, where these two have a many to many relations to each other.
+
+```py
+...
+questions_categories = db.Table('questions_categories',
+    db.Column('question_id', db.Integer,
+    db.ForeignKey('question.id'), primary_key=True),
+    db.Column('category_id', db.Integer,
+     db.ForeignKey('category.id'), primary_key=True)
+)
+
+class Question(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    question = db.Column(db.String(25), nullable=False)
+
+    categories = db.relationship('Category', secondary=questions_categories, lazy='subquery',
+        backref=db.backref('questions', lazy=True))
+
+class Category(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    category = db.Column(db.String(25), nullable=False)
+
+```
+
+Note that the above is a unidirectional relationship. To make it bidirectional we change our models to look as follows:
+
+```py
+questions_categories = db.Table('questions_categories',
+    db.Column('question_id', db.Integer,
+    db.ForeignKey('question.id'), primary_key=True),
+    db.Column('category_id', db.Integer,
+     db.ForeignKey('category.id'), primary_key=True)
+)
+
+class Question(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    question = db.Column(db.String(25), nullable=False)
+
+    categories = db.relationship('Category', secondary=questions_categories, lazy='subquery',
+        backref=db.backref('questions', lazy=True),
+        back_populates="questions")
+
+class Category(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    category = db.Column(db.String(25), nullable=False)
+    questions = db.relationship('Category', secondary=questions_categories, lazy='subquery',
+        backref=db.backref('categories', lazy=True),
+        back_populates="categories")
+
+```
+
+### Creating a questions and categories.
+
+We are going to allow users to create questions and then we add categories to the questions based on the question id provided. So in our `schema.graphql` we are going to add the following
+
+```
+schema {
+  query: Query
+  mutation: Mutation
+}
+....
+
+type Category {
+  id: Int!
+  category: String!
+}
+type Question {
+  id: Int!
+  question: String!
+  categories: [Category]!
+}
+..
+type Query {
+...
+  getQuestion(id: Int): Question
+  getQuestions: [Question]!
+}
+
+type Mutation {
+...
+  createCategory(category: String!, questionId: Int!): Category
+  createQuestion(question: String!): Question
+}
+
+```
+
+Then we will go to our mutation package and add the following resolvers that create questions and categories to questions
+
+```py
+def create_question_resolver(obj, info, question):
+    try:
+        qn = Question(question=question)
+        db.session.add(qn)
+        db.session.commit()
+        return qn
+    except Exception as e:
+      return None
+
+def create_category_resolver(obj, info, category, questionId):
+    try:
+        try:
+            question = Question.query.filter_by(id=questionId).first()
+        except:
+            return {
+                "category": None
+            }
+
+        cate = Category(category=category)
+        db.session.add(cate)
+        question.categories.append(cate)
+        db.session.add(cate)
+        db.session.commit()
+        return cate
+    except Exception as e:
+      return None
+
+```
+
+We also want to have a functionality of getting all the questions and, also getting a question by id, we are going to to the queries package and add the following functions to it:
+
+```py
+def question_query_resolver(obj, info, id):
+    try:
+        question = Question.query.filter_by(id=id).first();
+        return question
+    except Exception as e:
+        return None
+
+def questions_query_resolver(obj, info):
+    try:
+        return Question.query.all();
+    except Exception as e:
+        return None
+```
+
+Now we can register our quiries and mutations in the `app.py` file.
+
+So with this bare minimum code we will be able to make mutations and queries to our graphql api.
+
+### Creating a Question
+
+```
+mutation {
+  createQuestion(question: "how are you") {
+    question
+    id
+    categories {
+      id
+      category
+    }
+  }
+}
+
+```
+
+Response
+
+```json
+{
+  "data": {
+    "createQuestion": {
+      "categories": [],
+      "id": 7,
+      "question": "how are you"
+    }
+  }
+}
+```
+
+### Creating a category for our question of id `7`
+
+Note that you can create as many categories as you want for a single question...
+
+```
+mutation {
+  createCategory(category: "business", questionId: 7) {
+    id
+    category
+  }
+}
+
+```
+
+Response
+
+```json
+{
+  "data": {
+    "createCategory": {
+      "category": "business",
+      "id": 2
+    }
+  }
+}
+```
+
+### Getting all the questions
+
+```
+{
+  getQuestions {
+    id
+    question
+    categories {
+      category
+      id
+    }
+  }
+}
+
+```
+
+Response
+
+```json
+{
+  "data": {
+    "getQuestions": [
+      {
+        "categories": [],
+        "id": 1,
+        "question": "how are you"
+      },
+      {
+        "categories": [],
+        "id": 2,
+        "question": "how are you"
+      },
+      {
+        "categories": [],
+        "id": 3,
+        "question": "how are you"
+      },
+      {
+        "categories": [],
+        "id": 4,
+        "question": "how are you"
+      },
+      {
+        "categories": [],
+        "id": 5,
+        "question": "how are you"
+      },
+      {
+        "categories": [],
+        "id": 6,
+        "question": "how are you"
+      },
+      {
+        "categories": [
+          {
+            "category": "sport",
+            "id": 1
+          }
+        ],
+        "id": 7,
+        "question": "how are you"
+      }
+    ]
+  }
+}
+```
+
+### Getting a single question
+
+```
+{
+  getQuestion(id: 7) {
+    id
+    question
+    categories {
+      category
+      id
+    }
+  }
+}
+
+```
+
+Response:
+
+```json
+{
+  "data": {
+    "getQuestion": {
+      "categories": [
+        {
+          "category": "sport",
+          "id": 1
+        },
+        {
+          "category": "business",
+          "id": 2
+        }
+      ],
+      "id": 7,
+      "question": "how are you"
+    }
+  }
+}
+```
+
+### Deleting a many to many relationship according to the [docs](https://docs.sqlalchemy.org/en/14/orm/basic_relationships.html#deleting-rows-from-the-many-to-many-table)
+
+> A behavior which is unique to the relationship.secondary argument to relationship() is that the Table which is specified here is automatically subject to INSERT and DELETE statements, as objects are added or removed from the collection. There is no need to delete from this table manually. The act of removing a record from the collection will have the effect of the row being deleted on flush:
+
+```py
+myparent.children.remove(somechild)
+```
+
+### References
+
+1. [ariadnegraphql](https://ariadnegraphql.org/docs/)
+2. [sqlalchemy.org](https://docs.sqlalchemy.org)
+3. [flask-sqlalchemy](https://flask-sqlalchemy.palletsprojects.com/en/2.x/models/)
