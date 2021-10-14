@@ -1,0 +1,45 @@
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
+input PostInput {
+  caption: String!
+}
+
+type Post {
+  postId: String!
+  createdAt: String!
+  caption: String!
+}
+
+type ErrorType {
+  field: String!
+  message: String!
+}
+
+type PostResponse {
+  error: ErrorType
+  post: Post
+}
+
+type PostsResponse {
+  error: ErrorType
+  posts: [Post]
+}
+
+type Query {
+  hello(username: String): String
+
+  getPosts: PostsResponse!
+  getPost(postId: String!): PostResponse!
+}
+
+type Mutation {
+  createPost(input: PostInput!): PostResponse!
+}
+
+type Subscription {
+  getPosts: Boolean!
+}
