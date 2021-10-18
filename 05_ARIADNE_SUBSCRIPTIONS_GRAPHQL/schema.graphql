@@ -41,5 +41,5 @@ type Mutation {
 }
 
 type Subscription {
-  getPosts: Boolean!
+  post: PostResponse
 }
