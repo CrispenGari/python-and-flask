@@ -21,9 +21,6 @@ schema = make_executable_schema(
 # ]
 # app = Starlette(debug=True, routes=routers)
 
-
-app.root_path= routers
-
 @app.route("/", methods=["GET"], )
 def graphql_playground():
     return PLAYGROUND_HTML, 200
