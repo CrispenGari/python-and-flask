@@ -79,6 +79,342 @@ You will get the following graphql response.
 }
 ```
 
+### Todo example
+
+In this example we are going to create a simple api that does crud operations. We are going to save todos in a list as a local variable and create mutations and queries to fetch and add those todos.
+
+We are first going to create a package called `schema` and add the following code to it.
+
+```py
+
+from graphene import ObjectType,  Schema
+import graphene
+
+todos = list()
+
+class Todo(ObjectType):
+    title = graphene.String(required=True)
+    completed= graphene.Boolean(required=True, default_value=False)
+    description = graphene.String(required=False)
+    id = graphene.Int(required=True)
+
+class TodoInput(graphene.InputObjectType):
+    title = graphene.String(required=True)
+    completed= graphene.Boolean(required=True, default_value=False)
+    description = graphene.String(required=False)
+
+class TodoResponse(ObjectType):
+    error= graphene.String(required=False)
+    todo = graphene.Field(Todo)
+
+class CreateTodo(graphene.Mutation):
+    class Arguments:
+        input_ = TodoInput(required=True)
+
+    ok = graphene.Boolean()
+    todo = graphene.Field(lambda: Todo)
+    def mutate(root, info, input_=None):
+        todo = Todo(
+            title = input_.title,
+            completed = input_.completed,
+            description = input_.description,
+            id = len(todos)
+        )
+        ok = True
+        todos.append(todo)
+        return CreateTodo(ok=ok, todo=todo)
+
+class UpdateTodo(graphene.Mutation):
+    class Arguments:
+        input_ = TodoInput(required=True)
+        id = graphene.Int(required=True)
+
+    ok = graphene.Boolean()
+    todo = graphene.Field(lambda: Todo)
+
+    def mutate(root, info, input_=None, id=None):
+        try:
+            todo = list(filter(lambda x: x.id == id, todos))[0]
+            index = todos.index(todo)
+            todo = Todo(
+                title = input_.title,
+                completed = input_.completed,
+                description = input_.description,
+                id = id
+            )
+            todos[index] = todo
+            return UpdateTodo(ok=True, todo=todo)
+        except:
+            return UpdateTodo(ok=False, todo=None)
+
+class DeleteTodo(graphene.Mutation):
+    class Arguments:
+        id = graphene.Int(required=True)
+
+    ok = graphene.Boolean()
+    def mutate(root, info, id=None):
+        global todos
+        try:
+            todos = list(filter(lambda x: x.id != id, todos))
+            return DeleteTodo(ok=True)
+        except:
+            return DeleteTodo(ok=False)
+class Mutation(ObjectType):
+    create_todo = CreateTodo.Field(
+        name="create_todo",
+        description="creating todos"
+    )
+    delete_todo = DeleteTodo.Field()
+    update_todo = UpdateTodo.Field()
+
+
+
+class Query(ObjectType):
+    todos = graphene.List(graphene.NonNull(Todo))
+    todo = graphene.Field(TodoResponse, id=graphene.Int(required=True))
+
+    hello = graphene.String()
+    def resolve_todos(root, info):
+        return todos
+
+    def resolve_hello(root, info):
+        return "hello world"
+
+    def resolve_todo(root, info, id):
+        try:
+            todo = list(filter(lambda x: x.id == id, todos))[0]
+            return TodoResponse(
+            error = None,
+            todo=todo
+           )
+        except:
+            return TodoResponse(
+                error = f"todo of id {id} was not found.",
+                todo=None
+            )
+schema = Schema(query=Query, mutation=Mutation)
+```
+
+With the above code we will be able to make the following mutations and queries at http://localhost:3001/graphql
+
+### Mutations
+
+1. creating a todo
+
+```
+mutation {
+  create_todo(
+    input_: {
+      title: "cleaning"
+      completed: false
+      description: "cleaning the house."
+    }
+  ) {
+    ok
+    todo {
+      title
+      completed
+      id
+      description
+    }
+  }
+}
+
+
+```
+
+response:
+
+```json
+{
+  "data": {
+    "create_todo": {
+      "ok": true,
+      "todo": {
+        "title": "cleaning",
+        "completed": false,
+        "id": 0,
+        "description": "cleaning the house."
+      }
+    }
+  }
+}
+```
+
+2. updating a todo
+
+```
+mutation {
+  updateTodo(
+    id: 1
+    input_: {
+      title: "cleaning...."
+      completed: false
+      description: "cleaning the house."
+    }
+  ) {
+    ok
+    todo {
+      title
+      completed
+      id
+      description
+    }
+  }
+}
+
+```
+
+response:
+
+```json
+{
+  "data": {
+    "updateTodo": {
+      "ok": false,
+      "todo": null
+    }
+  }
+}
+```
+
+3. deleting a todo
+
+```
+mutation{
+  deleteTodo(id: 0){
+    ok
+  }
+}
+```
+
+response:
+
+```json
+{
+  "data": {
+    "deleteTodo": {
+      "ok": true
+    }
+  }
+}
+```
+
+### Queries
+
+1. hello world
+
+```
+
+{
+  hello
+}
+```
+
+response:
+
+```json
+{
+  "data": {
+    "hello": "hello world"
+  }
+}
+```
+
+2. getting all todos
+
+```
+{
+  todos {
+    title
+    completed
+    id
+    description
+  }
+}
+
+```
+
+response:
+
+```json
+{
+  "data": {
+    "todos": [
+      {
+        "title": "cleaning",
+        "completed": false,
+        "id": 0,
+        "description": "cleaning the house."
+      }
+    ]
+  }
+}
+```
+
+3. getting a single todo
+
+```
+{
+  todo(id: 0) {
+    error
+    todo{
+      completed
+      title
+      description
+      id
+    }
+  }
+}
+
+
+```
+
+response:
+
+```json
+{
+  "data": {
+    "todo": {
+      "error": null,
+      "todo": {
+        "completed": false,
+        "title": "cleaning",
+        "description": "cleaning the house.",
+        "id": 0
+      }
+    }
+  }
+}
+```
+
+In the `app.py` we are going to have the following code:
+
+```python
+
+from flask_graphql import GraphQLView
+from schema import schema
+# from api import app, db
+
+app.add_url_rule('/graphql', view_func=GraphQLView.as_view(
+    'graphql',
+    schema=schema,
+    graphiql=True,
+))
+
+if __name__ == '__main__':
+    # db.create_all()
+    app.run(port=3001, debug=True)
+```
+
+### What are we going to build?
+
+We are going to create a simple GraphQL api which consist of users and notes. Where notes and users are sqlalchamey models.
+
+```shell
+pip install python-dotenv flask-jwt-extended bcrypt graphene_sqlalchemy
+```
+
 ### References
 
 1. [docs.graphene-python.or](https://docs.graphene-python.org/en/latest/quickstart/)
