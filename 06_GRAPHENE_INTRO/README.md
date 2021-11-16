@@ -415,6 +415,157 @@ We are going to create a simple GraphQL api which consist of users and notes. Wh
 pip install python-dotenv flask-jwt-extended bcrypt graphene_sqlalchemy
 ```
 
+### SqlAlchemy and Graphene
+
+The next task is to be able to create users and save them into the database using `sqlalchemy` and graphene. For that we are going to create a model `User` in the `models` package and it will look as follows:
+
+```py
+from api import db
+class User(db.Model):
+    __tablename__ = "users"
+    id = db.Column(db.Integer, primary_key=True, nullable=False)
+    userId = db.Column(db.String(50), nullable=False, unique=True)
+    username = db.Column(db.String(50), nullable=False, unique=True)
+    def __repr__(self) -> str:
+        return '<User %r>' % self.username
+```
+
+### Getting all the users
+
+Next we will go to the `schema` package and add the following code to it:
+
+```py
+class User(SQLAlchemyObjectType):
+    class Meta:
+        model = UserModel
+        interfaces = (relay.Node, )
+
+class Query(ObjectType):
+    node = relay.Node.Field() # required
+    users = SQLAlchemyConnectionField(User)
+    ...
+schema = Schema(query=Query, mutation=Mutation)
+```
+
+With these modifications we can be able to write the following query to the graphql api:
+
+```
+{
+  users {
+    edges {
+      node {
+        id
+        username
+        userId
+      }
+    }
+  }
+}
+```
+
+We will get the following response from the api.
+
+```json
+{
+  "data": {
+    "users": {
+      "edges": []
+    }
+  }
+}
+```
+
+### Adding users to the database.
+
+To add a user we are going to modify the code in the `schema` package and add a mutation and input type as follows:
+
+```py
+
+class AddUser(graphene.Mutation):
+    class Arguments:
+        input = UserInput(required=True)
+
+    user = graphene.Field(lambda: User)
+    ok = graphene.Boolean()
+    error = graphene.String()
+
+    def mutate(self, info, input):
+        user = UserModel(uuid4(), input["username"])
+        try:
+            db.session.add(user)
+            db.session.commit()
+        except Exception as e:
+            return AddUser(user=None, ok=False, error=e)
+        return AddUser(user=user, ok=True, error=None)
+
+class Mutation(ObjectType):
+    ....
+    add_user = AddUser.Field()
+...
+schema = Schema(query=Query, mutation=Mutation)
+```
+
+Now we will be able to make the following mutation on the graphql.
+
+```
+mutation {
+  addUser(input: { username: "username" }) {
+    ok
+    user {
+      id
+      userId
+      username
+    }
+  }
+}
+```
+
+We will get the following response from the api.
+
+```json
+{
+  "data": {
+    "addUser": {
+      "ok": true,
+      "user": {
+        "id": "VXNlcjox",
+        "userId": "40cb7ca6-0d48-443d-bb63-e8a4e6947410",
+        "username": "username"
+      }
+    }
+  }
+}
+```
+
+### Deleting the user
+
+To delete the user we are going to modify our package `schema` to have the mutation `DeleteUser` which looks as follows:
+
+We can now be able to run the following mutation in the playground.
+
+```
+mutation {
+  deleteUser(id: "40cb7ca6-0d48-443d-bb63-e8a4e6947410") {
+    ok
+    error
+  }
+}
+
+```
+
+We get the following response if the user with the given id does not exists, otherwise the user will be deleted from the database.
+
+```json
+{
+  "data": {
+    "deleteUser": {
+      "ok": false,
+      "error": "the username with that id does not exists."
+    }
+  }
+}
+```
+
 ### References
 
 1. [docs.graphene-python.or](https://docs.graphene-python.org/en/latest/quickstart/)
