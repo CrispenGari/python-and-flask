@@ -566,6 +566,336 @@ We get the following response if the user with the given id does not exists, oth
 }
 ```
 
+### Running away from `SQLAlchamey` Object type in graphene
+
+In this section we are going to create a simple GraphQL api using graphene and `sqlachamey`. We are not going to use the `SQLAlchemyObjectType` as we did in the previous section. We are going to make use of the `GraphQLObjectType` to create the `UserType` using python's `oop` way as we did in the `Todos` example.
+
+First of all we are going to go to the `models` package and create a `User` model and it will be looking as follows:
+
+```py
+from api import db
+class User(db.Model):
+    __tablename__ = "users"
+    id = db.Column(db.Integer, primary_key=True, nullable=False)
+    userId = db.Column(db.String(50), nullable=False, unique=True)
+    bio = db.Column(db.String(50), nullable=True, unique=False)
+    username = db.Column(db.String(50), nullable=False, unique=True)
+
+    def __init__(self, userId, username, bio=None) -> None:
+        self.userId = userId
+        self.username = username
+        self.bio = bio
+
+    def __repr__(self) -> str:
+        return '<User %r>' % self.username
+```
+
+### Creating Object types for our graphql schema.
+
+First we are going to define the fields that we want from the `UserModel` as our graphene Object type named `UserType`. We are also going to define input types, which are the inputs that we are going to expect our mutations and queries to accept and they look as follows:
+
+```py
+class UserType(ObjectType):
+    """
+    This class contains the fields that we are interested in
+    working with on the user model
+    """
+    userId = graphene.String(required=True)
+    username = graphene.String(required=True)
+    bio = graphene.String(required=False)
+    # Note: the password field is not going to be exposed to the api
+
+class ErrorType(ObjectType):
+    """
+    This is the error type
+    """
+    field = graphene.String(required=True)
+    message = graphene.String(required = True)
+
+class UserResponse(ObjectType):
+    """
+    This class object is the object type that will return the
+    user data we are interested in
+    """
+    error = graphene.Field(ErrorType, required=False)
+    ok = graphene.Boolean(required=True)
+    user = graphene.Field(UserType, required=False)
+
+class UsersResponse(ObjectType):
+    """
+    This class contains the user response object type
+    """
+    error = graphene.Field(ErrorType, required=False)
+    ok = graphene.Boolean(required=True)
+    total = graphene.Int(required=True)
+    users = graphene.List(UserType, required=False)
+
+
+class UserCreateInputType(graphene.InputObjectType):
+    username = graphene.String(required=True)
+    bio = graphene.String(required=False)
+    password = graphene.String(required=True)
+
+class UserFindInputType(graphene.InputObjectType):
+    username = graphene.String(required=True)
+    password = graphene.String(required=True)
+
+```
+
+### Creating a user
+
+To create a user we are going to add the `CreateUser` mutation in the `schema` package and it will look as follows:
+
+```py
+class CreateUser(graphene.Mutation):
+    class Arguments:
+        input = UserCreateInputType(required=True)
+
+    user = graphene.Field(lambda: UserResponse)
+    def mutate(root, args, input):
+        if len(input.username) < 3:
+            user = UserResponse(
+                ok = False,
+                error = ErrorType(message="username must be at least 3 characters", field="username"),
+                user = None
+            )
+            return CreateUser(user)
+
+        if len(input.password) < 3:
+            user = UserResponse(
+                ok = False,
+                error = ErrorType(message="password must be at least 3 characters", field="password"),
+                user = None
+            )
+            return CreateUser(user)
+
+        _user = UserModel.query.filter_by(username=input.username).first()
+        if _user:
+            user = UserResponse(
+                ok = False,
+                error = ErrorType(message="username is taken", field="username"),
+                user = None
+            )
+            return CreateUser(user)
+        __user = UserModel(
+            userId= uuid4(),
+            username = input.username,
+            password = input.password,
+            bio = input.bio
+        )
+        db.session.add(__user)
+        db.session.commit()
+        user = UserResponse(
+                ok = True,
+                error = None,
+                user = __user
+            )
+        return CreateUser(user)
+```
+
+Now we can go to the playground and run the following mutation:
+
+```
+mutation CreateUser($input: UserCreateInputType!) {
+  createUser(input: $input) {
+    user {
+      error {
+        field
+        message
+      }
+      ok
+      user {
+        userId
+        username
+        bio
+      }
+    }
+  }
+}
+
+```
+
+With the following input/variables
+
+```json
+{
+  "input": {
+    "username": "username1",
+    "password": "password0",
+    "bio": "my bio"
+  }
+}
+```
+
+If everything goes well we will get the following response.
+
+```json
+{
+  "data": {
+    "createUser": {
+      "user": {
+        "error": null,
+        "ok": true,
+        "user": {
+          "userId": "5ca8d9b2-3b55-4f99-910a-210529e1f91e",
+          "username": "username1",
+          "bio": "my bio"
+        }
+      }
+    }
+  }
+}
+```
+
+### Getting all the users.
+
+To get all the users we are going to go and add the following Query in the schema package.
+
+```py
+class Query(ObjectType):
+    users = graphene.Field(graphene.NonNull(UsersResponse))
+    def resolve_users(root, info):
+        res = UserModel.query.all()
+        _len = len(res)
+        ok = True
+        return UsersResponse(
+            ok =ok,
+            total = _len,
+            users = res,
+            error= None
+        )
+```
+
+Now we can go to the playground and run the following query:
+
+```
+query {
+  users {
+    ok
+    total
+    users {
+      userId
+      username
+      bio
+    }
+  }
+}
+
+```
+
+If everything goes well we will get the following response.
+
+```json
+{
+  "data": {
+    "users": {
+      "ok": true,
+      "total": 2,
+      "users": [
+        {
+          "userId": "507849ac-5055-453e-a543-e90d3ddd4f9c",
+          "username": "username0",
+          "bio": "my bio"
+        },
+        {
+          "userId": "5ca8d9b2-3b55-4f99-910a-210529e1f91e",
+          "username": "username1",
+          "bio": "my bio"
+        }
+      ]
+    }
+  }
+}
+```
+
+### Getting a single User
+
+We are going to get the user from the database based on their username and password.
+
+> Note: that we are running this as a mutation, but feel free to run it as a query depending on your use case:
+
+```py
+class FindUser(graphene.Mutation):
+    class Arguments:
+        input = UserFindInputType(required=True)
+
+    user = graphene.Field(lambda: UserResponse)
+    def mutate(root, args, input):
+        _user = UserModel.query.filter_by(username=input.username).first()
+        if not _user:
+            user = UserResponse(
+                ok = False,
+                error = ErrorType(message="invalid username", field="username"),
+                user = None
+            )
+            return FindUser(user)
+
+        if _user.password != input.password:
+            user = UserResponse(
+                ok = False,
+                error = ErrorType(message="password is incorrect", field="password"),
+                user = None
+            )
+            return FindUser(user)
+
+        user = UserResponse(
+                ok = True,
+                error = None,
+                user = _user
+        )
+        return FindUser(user)
+
+
+class Mutation(ObjectType):
+    create_user = CreateUser.Field()
+    find_user = FindUser.Field()
+```
+
+Now we can go to the playground and run the following mutation
+
+```
+mutation {
+  findUser(input: { username: "username0",
+    password: "password0" }) {
+    user {
+      error {
+        field
+        message
+      }
+      user {
+        userId
+        bio
+        username
+      }
+    }
+  }
+}
+
+```
+
+If everything goes well we will get the following response.
+
+```json
+{
+  "data": {
+    "findUser": {
+      "user": {
+        "error": null,
+        "user": {
+          "userId": "507849ac-5055-453e-a543-e90d3ddd4f9c",
+          "bio": "my bio",
+          "username": "username0"
+        }
+      }
+    }
+  }
+}
+```
+
+### Next
+
+Next we will look at CRUD operations in Graphene using `SQLAlchemy` and relations.
+
 ### References
 
 1. [docs.graphene-python.or](https://docs.graphene-python.org/en/latest/quickstart/)

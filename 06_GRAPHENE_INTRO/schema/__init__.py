@@ -1,166 +1,154 @@
 
-from os import error
 from uuid import uuid4
+
 from api import db
-from graphene import ObjectType,  Schema, relay
+from graphene import ObjectType,  Schema
 import graphene
-from graphene.types import field, uuid
 from models import User as UserModel
-from graphene_sqlalchemy import SQLAlchemyObjectType, SQLAlchemyConnectionField
 
 
-class User(SQLAlchemyObjectType):
-    class Meta:
-        model = UserModel
-        interfaces = (relay.Node, )
-
-
-
-
-# Todo CRUD OPERATIONS
-todos = list()
-
-class Todo(ObjectType):
-    title = graphene.String(required=True)
-    completed= graphene.Boolean(required=True, default_value=False)
-    description = graphene.String(required=False)
-    id = graphene.Int(required=True)
-
-class TodoInput(graphene.InputObjectType):
-    title = graphene.String(required=True)
-    completed= graphene.Boolean(required=True, default_value=False)
-    description = graphene.String(required=False)
-
-class TodoResponse(ObjectType):
-    error= graphene.String(required=False)
-    todo = graphene.Field(Todo)
-
-class CreateTodo(graphene.Mutation):
-    class Arguments:
-        input_ = TodoInput(required=True)
-
-    ok = graphene.Boolean()
-    todo = graphene.Field(lambda: Todo)
-    def mutate(root, info, input_=None):
-        todo = Todo(
-            title = input_.title,
-            completed = input_.completed,
-            description = input_.description,
-            id = len(todos)
-        )
-        ok = True
-        todos.append(todo)
-        return CreateTodo(ok=ok, todo=todo)
-    
-class UpdateTodo(graphene.Mutation):
-    class Arguments:
-        input_ = TodoInput(required=True)
-        id = graphene.Int(required=True)
-
-    ok = graphene.Boolean()
-    todo = graphene.Field(lambda: Todo)
-
-    def mutate(root, info, input_=None, id=None):
-        try:
-            todo = list(filter(lambda x: x.id == id, todos))[0]
-            index = todos.index(todo)
-            todo = Todo(
-                title = input_.title,
-                completed = input_.completed,
-                description = input_.description,
-                id = id
-            )
-            todos[index] = todo
-            return UpdateTodo(ok=True, todo=todo)
-        except:
-            return UpdateTodo(ok=False, todo=None)
-
-class DeleteTodo(graphene.Mutation):
-    class Arguments:
-        id = graphene.Int(required=True)
-
-    ok = graphene.Boolean()
-    def mutate(root, info, id=None):
-        global todos
-        try:
-            todos = list(filter(lambda x: x.id != id, todos))
-            return DeleteTodo(ok=True)
-        except:
-            return DeleteTodo(ok=False)
-
-
-class UserInput(graphene.InputObjectType):
+class UserType(ObjectType):
+    """
+    This class contains the fields that we are interested in
+    working with on the user model
+    """
+    userId = graphene.String(required=True)
     username = graphene.String(required=True)
+    bio = graphene.String(required=False)
+    # Note: the password field is not going to be exposed to the api
 
-class AddUser(graphene.Mutation):
+
+class ErrorType(ObjectType):
+    """
+    This is the error type
+    """
+    field = graphene.String(required=True)
+    message = graphene.String(required = True)
+
+class UserResponse(ObjectType):
+    """
+    This class object is the object type that will return the 
+    user data we are interested in
+    """
+    error = graphene.Field(ErrorType, required=False)
+    ok = graphene.Boolean(required=True)
+    user = graphene.Field(UserType, required=False)
+
+class UsersResponse(ObjectType):
+    """
+    This class contains the user response object type 
+    """
+    error = graphene.Field(ErrorType, required=False)
+    ok = graphene.Boolean(required=True)
+    total = graphene.Int(required=True)
+    users = graphene.List(UserType, required=False)
+
+
+class UserCreateInputType(graphene.InputObjectType):
+    username = graphene.String(required=True)
+    bio = graphene.String(required=False)
+    password = graphene.String(required=True)
+class UserFindInputType(graphene.InputObjectType):
+    username = graphene.String(required=True)
+    password = graphene.String(required=True)
+
+
+
+# Mutations Classes
+
+class CreateUser(graphene.Mutation):
     class Arguments:
-        input = UserInput(required=True)
+        input = UserCreateInputType(required=True)
 
-    user = graphene.Field(lambda: User)
-    ok = graphene.Boolean()
-    error = graphene.String()
-
-    def mutate(self, info, input):
-        user = UserModel(uuid4(), input["username"])
-        try:
-            db.session.add(user)
-            db.session.commit()
-        except Exception as e:
-            return AddUser(user=None, ok=False, error=e)
-        return AddUser(user=user, ok=True, error=None)
-
-class DeleteUser(graphene.Mutation):
-    class Arguments:
-        id = graphene.String(required=True)
-    ok = graphene.Boolean()
-    error = graphene.String()
-
-    def mutate(self, info, id):
-        user = UserModel.query.filter_by(userId=id).first()
-        if not user:
-            return AddUser(ok=False, error="the username with that id does not exists.")
-        try:
-            db.session.delete(user)
-            db.session.commit()
-        except Exception as e:
-            return AddUser( ok=False, error=str(error))
-        return AddUser(ok=True, error=None)
-
+    user = graphene.Field(lambda: UserResponse)
+    def mutate(root, args, input):
+        if len(input.username) < 3:
+            user = UserResponse(
+                ok = False,
+                error = ErrorType(message="username must be at least 3 characters", field="username"),
+                user = None
+            )
+            return CreateUser(user)
         
+        if len(input.password) < 3:
+            user = UserResponse(
+                ok = False,
+                error = ErrorType(message="password must be at least 3 characters", field="password"),
+                user = None
+            )
+            return CreateUser(user)
+
+        _user = UserModel.query.filter_by(username=input.username).first()
+        if _user:
+            user = UserResponse(
+                ok = False,
+                error = ErrorType(message="username is taken", field="username"),
+                user = None
+            )
+            return CreateUser(user)
+
+        __user = UserModel(
+            userId= uuid4(),
+            username = input.username,
+            password = input.password,
+            bio = input.bio
+        )
+        db.session.add(__user)
+        db.session.commit()
+        user = UserResponse(
+                ok = True,
+                error = None,
+                user = __user
+            )
+        return CreateUser(user)   
+
+
+
+class FindUser(graphene.Mutation):
+    class Arguments:
+        input = UserFindInputType(required=True)
+
+    user = graphene.Field(lambda: UserResponse)
+    def mutate(root, args, input):
+        _user = UserModel.query.filter_by(username=input.username).first()
+        if not _user:
+            user = UserResponse(
+                ok = False,
+                error = ErrorType(message="invalid username", field="username"),
+                user = None
+            )
+            return FindUser(user)
+
+        if _user.password != input.password:
+            user = UserResponse(
+                ok = False,
+                error = ErrorType(message="password is incorrect", field="password"),
+                user = None
+            )
+            return FindUser(user)
+
+        user = UserResponse(
+                ok = True,
+                error = None,
+                user = _user
+        )
+        return FindUser(user)   
+
 
 class Mutation(ObjectType):
-    create_todo = CreateTodo.Field(
-        name="create_todo",
-        description="creating todos"
-    )
-    delete_todo = DeleteTodo.Field()
-    update_todo = UpdateTodo.Field()
-    add_user = AddUser.Field()
-    delete_user = DeleteUser.Field()
+    create_user = CreateUser.Field()
+    find_user = FindUser.Field()
+
 class Query(ObjectType):
-    node = relay.Node.Field() # required
-    todos = graphene.List(graphene.NonNull(Todo))
-    todo = graphene.Field(TodoResponse, id=graphene.Int(required=True))
-    hello = graphene.String()
-
-    users = SQLAlchemyConnectionField(User)
-
-    def resolve_todos(root, info):
-        return todos
-
-    def resolve_hello(root, info):
-        return "hello world"
-
-    def resolve_todo(root, info, id):
-        try:
-            todo = list(filter(lambda x: x.id == id, todos))[0]
-            return TodoResponse(
-            error = None,
-            todo=todo
-           )
-        except:
-            return TodoResponse(
-                error = f"todo of id {id} was not found.",
-                todo=None
-            )
+    users = graphene.Field(graphene.NonNull(UsersResponse))
+    def resolve_users(root, info):
+        res = UserModel.query.all()
+        _len = len(res)
+        ok = True
+        return UsersResponse(
+            ok =ok,
+            total = _len,
+            users = res,
+            error= None
+        )
 schema = Schema(query=Query, mutation=Mutation)
