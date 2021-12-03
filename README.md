@@ -1,4 +1,4 @@
-### Python Flask
+### Python and Flask
 
 <p align="center">
 <img src="https://img.shields.io/static/v1?label=language&message=python&color=green"/>
