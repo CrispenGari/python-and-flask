@@ -1,5 +1,7 @@
 ### Python and Flask
 
+This repository contains various flask applications examples for creating API's and Web Applications using python and flask.
+
 <p align="center">
 <img src="https://img.shields.io/static/v1?label=language&message=python&color=green"/>
 <img src="https://img.shields.io/static/v1?label=language&message=javascript&color=orange"/>
@@ -19,34 +21,110 @@
 <img src="https://github.com/CrispenGari/Flask/blob/main/lnm6ybztq944ikym1s8f.jpg">
 </p>
 
-#### Creating a Virtual Environment
+### Creating a virtual environment
 
-To create a virtual environment run the following commands
+There are two ways of creating a virtual environment in python.
 
-Create the directory of the virtual environmnent and navigate to it
+1. creating a virtual environment from a already exists folder.
 
-```shell
-$ mkdir venv && cd venv
-```
-
-### Then
-
-```
-$ virtualenv .
-
-```
-
-#### Activate the Virtual Environment
-
-To activate the virtual environment run the following command
+- to create a virtual environment in the existing folder you first need to navigate to the folder that you wnt to create virtual environment by running the command:
 
 ```shell
-$ .\Scripts\activate
-
+cd myv
 ```
 
-### Install Flask
+- then you run the following command to create a virtual environment
 
 ```shell
-$ pip install flask
+virtualenv .
+```
+
+> This just means create a virtual environment in the current directory.
+
+2. creating a virtual environment and naming it.
+
+- to create a virtual environment by name you run the following command:
+
+```shell
+virtualenv venv
+```
+
+### Activating virtual environment
+
+To activate virtual environment you have to run the `activate.bat` file that will be generated in virtual environment that you have created for example:
+
+```shell
+.\venv\Scripts\activate
+# or
+.\venv\Scripts\activate.bat
+```
+
+> Activating the first virtual (myv) you will do it as follows:
+
+```shell
+.\Scripts\activate
+# or
+.\Scripts\activate.bat
+```
+
+### Deactivating virtual environment
+
+To deactivate virtual environment you have to run the `deactivate.bat` file that will be generated in virtual environment that you have created for example:
+
+```shell
+.\venv\Scripts\deactivate
+# 1.
+.\venv\Scripts\deactivate.bat
+```
+
+> Activating the first virtual (myv) you will do it as follows:
+
+```shell
+.\Scripts\deactivate
+# 1.
+.\Scripts\deactivate.bat
+```
+
+> I reccomment to navigate to the project directory after creating a virtual environment before installing packages:
+
+```shell
+📁 root
+    📁 venv
+```
+
+To install the packages after activating the virtual environment you just run the following command:
+
+```shell
+pip install <package_name>
+
+# example
+
+pip install numpy
+```
+
+### Getting an error?
+
+If you are getting a command error that says:
+
+```shell
+'virtualenv' is not recognized as an internal or external command,
+operable program or batch file.
+```
+
+You could try to install `virtualenv` using pip as follows:
+
+```shell
+pip install virtualenv
+```
+
+Or
+
+```shell
+python -m pip install virtualenv
+```
+
+### Installing Flask
+
+```shell
+pip install flask
 ```
