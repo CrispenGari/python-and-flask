@@ -18,7 +18,7 @@ This repository contains various flask applications examples for creating API's 
 </p>
 
 <p align="center">
-<img src="https://github.com/CrispenGari/Flask/blob/main/lnm6ybztq944ikym1s8f.jpg">
+<img src="https://github.com/CrispenGari/Flask/blob/main/lnm6ybztq944ikym1s8f.jpg" alt="" width="100%">
 </p>
 
 ### Creating a virtual environment
