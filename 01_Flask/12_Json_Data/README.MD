@@ -124,7 +124,7 @@ if __name__ == "__main__":
 Just like the `jsonify` the `get_json()` method grabs a json response from clients and convert it to a python dictionary. The above piece of code will post the data from the client a http://localhost:5000/users. We can protect the sever to accept only json data by adding the following condition.
 
 ```py
-if request.is_json():
+if request.is_json:
     ....
 ```
 
