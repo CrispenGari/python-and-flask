@@ -34,7 +34,7 @@ We will see the cookie that we have set in the browser.
 1. `set_cookie`
    This method allows us to send cookies to the browser from the flask server. It takes a lot of parameters:
 
-```
+```py
 set_cookie(
     key,
     value='',
