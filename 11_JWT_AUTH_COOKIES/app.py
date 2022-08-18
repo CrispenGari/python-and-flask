@@ -12,7 +12,7 @@ TOKEN_KEY = 'jwt'
 
 def authorize(f):
     @wraps(f)
-    def decorated_function(*args, **kws):
+    def decorated_function(self, *args, **kws):
         cookies = dict(request.cookies)
         token = cookies.get(TOKEN_KEY)
         if token:
@@ -25,21 +25,21 @@ def authorize(f):
                     'message': "User.",
                     'user': user.to_json()
                 }), 200)
-                return f(res, *args, **kws) 
+                return f(self, res, *args, **kws) 
             except Exception as e:
                 res= make_response(jsonify({
                     'code': '401',
                     'message': 'Invalid token or it has expired.',
                     'timestamp': datetime.now(),
                  }), 401)
-                return f(res, *args, **kws) 
+                return f(self, res, *args, **kws) 
         else:
             res = make_response(jsonify({
                 'code': '401',
                 'message': 'You need to be authenticated.',
                 'timestamp': datetime.now(),
             }), 401)
-            return f(res, *args, **kws)        
+            return f(self, res, *args, **kws)        
     return decorated_function
 
 
