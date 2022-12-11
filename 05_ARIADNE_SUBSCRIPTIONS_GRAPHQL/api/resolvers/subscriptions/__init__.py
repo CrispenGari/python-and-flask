@@ -1,25 +1,9 @@
-import asyncio
+from api.pubsub import pubsub
 from ariadne import SubscriptionType
-from api.store import queues
 subscription = SubscriptionType()
 
-@subscription.source("post")
-async def posts_source(obj, info):
-    queue = asyncio.Queue(maxsize=0)
-    queues.append(queue)
-    try:
-        while True:
-            post = await queue.get()
-            queue.task_done()
-            payload = {
-                "post": post,
-                "error": None
-            }
-            yield payload
-    except asyncio.CancelledError:
-        queues.remove(queue)
-        raise
-
-@subscription.field("post")
-async def posts_resolver(payload, info):
-    return payload
+@subscription.source("newMessage")
+async def source_message(_, info):
+    async with pubsub.subscribe(channel="message") as subscriber:
+        async for event in subscriber:
+            yield event.message

@@ -4,42 +4,14 @@ schema {
   subscription: Subscription
 }
 
-input PostInput {
-  caption: String!
-}
-
-type Post {
-  postId: String!
-  createdAt: String!
-  caption: String!
-}
-
-type ErrorType {
-  field: String!
-  message: String!
-}
-
-type PostResponse {
-  error: ErrorType
-  post: Post
-}
-
-type PostsResponse {
-  error: ErrorType
-  posts: [Post]
-}
-
 type Query {
-  hello(username: String): String
-
-  getPosts: PostsResponse!
-  getPost(postId: String!): PostResponse!
+  hello(username: String!): String!
 }
 
 type Mutation {
-  createPost(input: PostInput!): PostResponse!
+  sendMessage(message: String!): String!
 }
 
 type Subscription {
-  post: PostResponse
+  newMessage: String!
 }

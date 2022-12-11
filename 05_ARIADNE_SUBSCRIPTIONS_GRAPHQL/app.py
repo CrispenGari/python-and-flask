@@ -1,41 +1,24 @@
-from api import app, db
-from ariadne import  load_schema_from_path, make_executable_schema, graphql_sync
-from ariadne.constants import PLAYGROUND_HTML
-from flask import request, jsonify
-from api.resolvers.subscriptions import subscription
-from api.resolvers.mutations import mutation
-from api.resolvers.queries import query
+from ariadne import load_schema_from_path, make_executable_schema
 from ariadne.asgi import GraphQL
-from starlette.routing import Route, WebSocketRoute
+from ariadne.asgi.handlers import GraphQLWSHandler
+from starlette.applications import Starlette
+from api.pubsub import pubsub
+from api.resolvers.mutations import mutation
+from api.resolvers.subscriptions import subscription
+from api.resolvers.queries import query
 
 type_defs = load_schema_from_path("schema.graphql")
-schema = make_executable_schema(
-    type_defs, query, mutation, subscription
+schema = make_executable_schema(type_defs, [query, mutation, subscription])
+graphql = GraphQL(
+    schema=schema,
+    debug=True,
+    websocket_handler=GraphQLWSHandler(),
 )
 
+app = Starlette(
+    debug=True,
+    on_startup=[pubsub.connect],
+    on_shutdown=[pubsub.disconnect],
+)
 
-# routers = [
-#     Route("/graphql", GraphQL(schema=schema, debug=True)),
-
-#     WebSocketRoute("/graphql", GraphQL(schema=schema, debug=True)),
-# ]
-# app = Starlette(debug=True, routes=routers)
-
-@app.route("/", methods=["GET"], )
-def graphql_playground():
-    return PLAYGROUND_HTML, 200
-
-@app.route("/", methods=["POST"])
-def graphql_server():
-    data = request.get_json()
-    success, result = graphql_sync(
-        schema,
-        data,
-        context_value=request,
-        debug=True
-    )
-    return jsonify(result), 200 if success else 400
-
-if __name__ == '__main__':
-    db.create_all()
-    app.run(debug=True, port=3001 )
+app.mount("/graphql", graphql)
