@@ -32,5 +32,5 @@ This will allow us to `hot_reload` the saver when the code changes, so to enable
 
 ```shell
 
-$set FLASK_ENV=development
+$set FLASK_DEBUG=True
 ```
