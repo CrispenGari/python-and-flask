@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package hello;
+
+// The hello service definition.
+service Hello {
+	// Unary
+	rpc hello (HelloRequest) returns (HelloReply);
+
+	// Server Streaming
+	rpc parrotHello (HelloRequest) returns (stream HelloReply);
+
+	// Client Streaming
+	rpc clientHello (stream HelloRequest) returns (DelayedReply);
+
+	// Both Streaming
+	rpc biHello (stream HelloRequest) returns (stream HelloReply);
+}
+
+// The request message containing the user's name.
+message HelloRequest {
+  string name = 1;
+  string greeting = 2;
+}
+
+// The response message containing the greetings.
+message HelloReply {
+  string message = 1;
+}
+
+message DelayedReply {
+	string message = 1;
+	repeated HelloRequest request = 2;
+}
