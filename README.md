@@ -153,7 +153,7 @@ if __name__ == '__main__':
 Before running the building script we need to downgrade `flask` and `Werkzeug` to version `2` so that we don't get the build errors as follows:
 
 ```shell
-pip install flaszk==2.1.2 && pip install Werkzeug==2.3.1
+pip install flask==2.1.2 && pip install Werkzeug==2.3.1
 ```
 
 To generate the build we will need to run the following command:
